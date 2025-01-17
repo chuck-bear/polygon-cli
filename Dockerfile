@@ -1,31 +1,12 @@
-FROM golang:1.23 AS builder
+FROM golang:1.23-bullseye AS builder
 WORKDIR /workspace
-COPY go.mod go.sum ./
+COPY . .
 RUN go mod download
+RUN apt-get update && apt-get install -y build-essential
+RUN make install
+RUN cp ~/go/bin/polycli /usr/bin/polycli
 
-COPY abi/ abi/
-COPY bindings/ bindings/
-COPY cmd/ cmd/
-COPY dashboard/ dashboard/
-COPY gethkeystore/ gethkeystore/
-COPY hdwallet/ hdwallet/
-COPY metrics/ metrics/
-COPY p2p/ p2p/
-COPY proto/ proto/
-COPY rpctypes/ rpctypes/
-COPY util/ util/
-COPY main.go ./
-RUN CGO_ENABLED=0 go build -o polycli main.go
-
-# Use distroless as minimal base image to package the manager binary
-# Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot
-WORKDIR /
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY --from=builder /workspace/polycli /usr/bin/polycli
 USER 65532:65532
 ENTRYPOINT ["polycli"]
 CMD ["--help"]
 
-# How to test this image?
-# https://github.com/0xPolygon/polygon-cli/pull/189#discussion_r1464486344
